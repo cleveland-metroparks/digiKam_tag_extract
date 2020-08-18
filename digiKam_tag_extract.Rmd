@@ -25,6 +25,8 @@ require(camtrapR)
 # paths must have forward slashes, no backslashes
 indir="P:/WCtrailMonitoring" # These need to be renamed something to match your use case
 outdir="P:/WCtrailMonitoringRenamed" # Cannot be written to same as above (or subdirectory)
+projname = sapply(strsplit(indir,"/"),"[[",2)
+
 exifTagNames(inDir = indir, returnMetadata = F)
 exifTagNames(inDir = indir, returnMetadata = T)
 
@@ -44,56 +46,88 @@ If I understand what minDeltaTime = 0 and removeDuplicateRecords =T means,
 * all records are independent,
 * but any of same species with same timestamp are removed. 
 * So are any that are not tagged
+* We settled on using minDeltaTime = 1 to eliminate duplicates that did not have same timestamp
 
-Warnings:
-Warning: minDeltaTime is 0. deltaTimeComparedTo = 'lastIndependentRecord' will have no effect
-recordTables                 :      0 files      Skipping
-Warning: WC1388 10.25-11.23.19 tagged :  removed 129 records out of 1047 because of missing species metadata tag
-WC1388 10.25-11.23.19 tagged :    990 images  478 duplicates removed      |========            |   40%
-Warning: WC3596 10.25-11.23.19 tagged :  removed 1001 records out of 2925 because of missing species metadata tag
-WC3596 10.25-11.23.19 tagged :   2843 images 1331 duplicates removed      |============        |   60%
-Warning: WCAPT11 10.18-12.15.19 tagged :  removed 1488 records out of 6702 because of missing species metadata tag
-WCAPT11 10.18-12.15.19 tagged:   7701 images 3590 duplicates removed      |================    |   80%
-Warning: WCBL10 10.21-12.15.19 tagged :  removed 429 records out of 1027 because of missing species metadata tag
-WCBL10 10.21-12.15.19 tagged :    752 images  367 duplicates removed      |====================|  100%
-saving csv to  P:/WCtrailMonitoringRenamed/record_table_0min_deltaT_2020-08-17.csv
-Warning message:
-recordTables :  contains no files of interest and was omitted 
+I am currently using indir to derive the project name.
+
+minDeltaTime is also added to the recordtable before it is saved
+
 
 ```{r recordtable}
 require(camtrapR)
 
-indir2 = "P:/WCtrailMonitoringRenamed" # These need to be renamed something to match your use case
-outdir2 = "P:/WCtrailMonitoringRenamed/recordTables" # Cannot be written to same as above (or subdirectory)
+# These need to be renamed something to match your use case
+# If you do not rename files, set to indir and outdir
+# Path must have forward slashes, no backslashes
+indir2 = "P:/WCtrailMonitoringRenamed" 
+# Cannot be written to same as above (or subdirectory)
+outdir2 = "data/recordTables" 
 dir.create(file.path(outdir2), showWarnings = FALSE)
-WCmonitoring.10to12.19.deltat0.rt <- recordTable(inDir = indir2, # path must have forward slashes, no backslashes
-                       IDfrom = "metadata",
-                       minDeltaTime = 0,
-                       deltaTimeComparedTo = "lastIndependentRecord",
-                       timeZone = "EST",
-                       stationCol = "Station", # leave alone
-                       writecsv = TRUE,
-                       outDir = outdir2,
-                       metadataHierarchyDelimitor = "|", # leave as vertical bar
-                       metadataSpeciesTag = "SPECIES",
-                       additionalMetadataTags = c("GPSLatitude","GPSLongitude"),
-                       removeDuplicateRecords = TRUE
-)
+# rt_out = "WCmonitoring.10to12.19.deltat10.rt.csv"
 
-WCmonitoring.10to12.19.deltat10.rt <- recordTable(inDir = indir2, # path must have forward slashes, no backslashes
-                       IDfrom = "metadata",
-                       minDeltaTime = 10, # minutes assumed
-                       deltaTimeComparedTo = "lastIndependentRecord",
-                       timeZone = "EST",
-                       stationCol = "Station", # leave alone
-                       writecsv = TRUE,
-                       outDir = outdir2,
-                       metadataHierarchyDelimitor = "|", # leave as vertical bar
-                       metadataSpeciesTag = "SPECIES",
-                       additionalMetadataTags = c("GPSLatitude","GPSLongitude"),
-                       removeDuplicateRecords = TRUE
-)
+rt_gen = function(indir = indir2,
+                 outdir = outdir2,
+                 projname = projname,
+                 mindelt = 10) {
+    rt = recordTable(inDir = indir2, 
+                IDfrom = "metadata",
+                minDeltaTime = mindelt,
+                deltaTimeComparedTo = "lastIndependentRecord",
+                timeZone = "EST",
+                stationCol = "Station", # leave alone
+                writecsv = FALSE,
+                outDir = outdir2,
+                 # leave as vertical bar
+                metadataHierarchyDelimitor = "|", 
+                metadataSpeciesTag = "SPECIES",
+                additionalMetadataTags =
+                    c("GPSLatitude","GPSLongitude"),
+                removeDuplicateRecords = TRUE
+                )
+# Add some stuff and then output
+    rt$ProjectName = projname
+    rt$mindeltatime = mindelt
+    drange = range(rt$Date)
+    daterange = paste(drange[1], drange[2], sep = " to ")
+    rt_out = paste0(projname, ".",
+                    daterange, ".",
+                    "mindeltat", ".",
+                    mindelt, ".rt.csv"
+                    )
+    write.csv(rt, 
+          file.path(outdir2, rt_out),
+          row.names = T)
+    return(rt)
+    }
 
+# Trying different minDeltaTimes to see what effect it has on sample size
+mindelt = 0  # minutes assumed
+WCmonitoring.10to12.19.deltat0.rt =
+    rt_gen(indir = indir2,
+           outdir = outdir2,
+           projname = projname,
+           mindelt = 0)
+
+mindelt = 1  # minutes assumed
+WCmonitoring.10to12.19.deltat1.rt =
+    rt_gen(indir = indir2,
+           outdir = outdir2,
+           projname = projname,
+           mindelt = 1)
+
+mindelt = 2  # minutes assumed
+WCmonitoring.10to12.19.deltat2.rt =
+    rt_gen(indir = indir2,
+           outdir = outdir2,
+           projname = projname,
+           mindelt = 2)
+
+mindelt = 10  # minutes assumed
+WCmonitoring.10to12.19.deltat10.rt =
+    rt_gen(indir = indir2,
+           outdir = outdir2,
+           projname = projname,
+           mindelt = 10)
 ```
 
 
@@ -106,6 +140,16 @@ wc_monitor.deltat10.stationbyspecies.sum =
     group_by(Station,Species) %>%
     tally()
 write.csv(wc_monitor.deltat10.stationbyspecies.sum, 
-          "wc_monitor.deltat10.stationbyspecies.sum.csv")
+          file.path(outidr,
+              "wc_monitor.deltat10.stationbyspecies.sum.csv"))
+
+wc_monitor.deltat1.stationbyspecies.sum = 
+    WCmonitoring.10to12.19.deltat1.rt %>%
+    group_by(Station,Species) %>%
+    tally()
+write.csv(wc_monitor.deltat1.stationbyspecies.sum, 
+          file.path(outidr,
+              "wc_monitor.deltat1.stationbyspecies.sum.csv"))
+
 ```
 
