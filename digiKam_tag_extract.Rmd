@@ -1,0 +1,111 @@
+---
+title: "Replace me"
+author: "By Patrick Lorch"
+code_folding: "hide"
+output:
+    html_document:
+        toc: true
+        depth: 3
+---
+
+
+## Rename files
+
+Use this section if you want to rename files first, before extracting tags.
+
+Before this step, I noticed that there were images duplicated in WC1388 10.25-11.23.19 tagged\101EK113 that were already in WC1388 10.25-11.23.19 tagged\100EK113.  They were tagged differently, so I went with copy that had NOTHING instead of blank.  I deleted copies from WC1388 10.25-11.23.19 tagged\100EK113 and left the ones in WC1388 10.25-11.23.19 tagged\101EK113 before running the renaming.
+
+I like to rename images to have sensible names.  I probably should have renamed stations something shorter.
+
+You can also add species classification to filename from metadata with `camtrapR::appendSpeciesNames()`
+
+```{r rename}
+require(camtrapR)
+
+# paths must have forward slashes, no backslashes
+indir="P:/WCtrailMonitoring" # These need to be renamed something to match your use case
+outdir="P:/WCtrailMonitoringRenamed" # Cannot be written to same as above (or subdirectory)
+exifTagNames(inDir = indir, returnMetadata = F)
+exifTagNames(inDir = indir, returnMetadata = T)
+
+imageRename(inDir = indir,
+            outDir = outdir,
+            hasCameraFolders= FALSE,
+            copyImages= T, # Run first with this set to F
+            writecsv = T # Run first with this set to F
+)
+```
+
+
+## Record table extract tags
+
+If I understand what minDeltaTime = 0 and removeDuplicateRecords =T means, 
+
+* all records are independent,
+* but any of same species with same timestamp are removed. 
+* So are any that are not tagged
+
+Warnings:
+Warning: minDeltaTime is 0. deltaTimeComparedTo = 'lastIndependentRecord' will have no effect
+recordTables                 :      0 files      Skipping
+Warning: WC1388 10.25-11.23.19 tagged :  removed 129 records out of 1047 because of missing species metadata tag
+WC1388 10.25-11.23.19 tagged :    990 images  478 duplicates removed      |========            |   40%
+Warning: WC3596 10.25-11.23.19 tagged :  removed 1001 records out of 2925 because of missing species metadata tag
+WC3596 10.25-11.23.19 tagged :   2843 images 1331 duplicates removed      |============        |   60%
+Warning: WCAPT11 10.18-12.15.19 tagged :  removed 1488 records out of 6702 because of missing species metadata tag
+WCAPT11 10.18-12.15.19 tagged:   7701 images 3590 duplicates removed      |================    |   80%
+Warning: WCBL10 10.21-12.15.19 tagged :  removed 429 records out of 1027 because of missing species metadata tag
+WCBL10 10.21-12.15.19 tagged :    752 images  367 duplicates removed      |====================|  100%
+saving csv to  P:/WCtrailMonitoringRenamed/record_table_0min_deltaT_2020-08-17.csv
+Warning message:
+recordTables :  contains no files of interest and was omitted 
+
+```{r recordtable}
+require(camtrapR)
+
+indir2 = "P:/WCtrailMonitoringRenamed" # These need to be renamed something to match your use case
+outdir2 = "P:/WCtrailMonitoringRenamed/recordTables" # Cannot be written to same as above (or subdirectory)
+dir.create(file.path(outdir2), showWarnings = FALSE)
+WCmonitoring.10to12.19.deltat0.rt <- recordTable(inDir = indir2, # path must have forward slashes, no backslashes
+                       IDfrom = "metadata",
+                       minDeltaTime = 0,
+                       deltaTimeComparedTo = "lastIndependentRecord",
+                       timeZone = "EST",
+                       stationCol = "Station", # leave alone
+                       writecsv = TRUE,
+                       outDir = outdir2,
+                       metadataHierarchyDelimitor = "|", # leave as vertical bar
+                       metadataSpeciesTag = "SPECIES",
+                       additionalMetadataTags = c("GPSLatitude","GPSLongitude"),
+                       removeDuplicateRecords = TRUE
+)
+
+WCmonitoring.10to12.19.deltat10.rt <- recordTable(inDir = indir2, # path must have forward slashes, no backslashes
+                       IDfrom = "metadata",
+                       minDeltaTime = 10, # minutes assumed
+                       deltaTimeComparedTo = "lastIndependentRecord",
+                       timeZone = "EST",
+                       stationCol = "Station", # leave alone
+                       writecsv = TRUE,
+                       outDir = outdir2,
+                       metadataHierarchyDelimitor = "|", # leave as vertical bar
+                       metadataSpeciesTag = "SPECIES",
+                       additionalMetadataTags = c("GPSLatitude","GPSLongitude"),
+                       removeDuplicateRecords = TRUE
+)
+
+```
+
+
+## Summarizing into tables
+
+```{r summary}
+library(dplyr)
+wc_monitor.deltat10.stationbyspecies.sum = 
+    WCmonitoring.10to12.19.deltat10.rt %>%
+    group_by(Station,Species) %>%
+    tally()
+write.csv(wc_monitor.deltat10.stationbyspecies.sum, 
+          "wc_monitor.deltat10.stationbyspecies.sum.csv")
+```
+
