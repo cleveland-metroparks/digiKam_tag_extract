@@ -135,20 +135,13 @@ WCmonitoring.10to12.19.deltat10.rt =
 
 ```{r summary}
 library(dplyr)
-wc_monitor.deltat10.stationbyspecies.sum = 
-    WCmonitoring.10to12.19.deltat10.rt %>%
-    group_by(Station,Species) %>%
-    tally()
-write.csv(wc_monitor.deltat10.stationbyspecies.sum, 
-          file.path(outidr,
-              "wc_monitor.deltat10.stationbyspecies.sum.csv"))
 
 wc_monitor.deltat1.stationbyspecies.sum = 
     WCmonitoring.10to12.19.deltat1.rt %>%
     group_by(Station,Species) %>%
     tally()
 write.csv(wc_monitor.deltat1.stationbyspecies.sum, 
-          file.path(outidr,
+          file.path(outdir2,
               "wc_monitor.deltat1.stationbyspecies.sum.csv"))
 
 ```
