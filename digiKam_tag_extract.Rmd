@@ -68,7 +68,8 @@ dir.create(file.path(outdir2), showWarnings = FALSE)
 rt_gen = function(indir = indir2,
                  outdir = outdir2,
                  projname = projname,
-                 mindelt = 10) {
+                 mindelt = 10,
+                 removedups = TRUE) {
     rt = recordTable(inDir = indir2, 
                 IDfrom = "metadata",
                 minDeltaTime = mindelt,
@@ -82,18 +83,22 @@ rt_gen = function(indir = indir2,
                 metadataSpeciesTag = "SPECIES",
                 additionalMetadataTags =
                     c("GPSLatitude","GPSLongitude"),
-                removeDuplicateRecords = TRUE
+                removeDuplicateRecords = removedups
                 )
 # Add some stuff and then output
     rt$ProjectName = projname
     rt$mindeltatime = mindelt
+    rt$removedups = "True"
     drange = range(rt$Date)
     daterange = paste(drange[1], drange[2], sep = " to ")
-    rt_out = paste0(projname, ".",
-                    daterange, ".",
-                    "mindeltat", ".",
-                    mindelt, ".rt.csv"
-                    )
+    rt_out = paste(projname,
+                    daterange,
+                    "mindeltat",
+                    mindelt,                     
+                    "removedups", 
+                    as.character(removedups), 
+                    "rt.csv",
+                    sep = ".")
     write.csv(rt, 
           file.path(outdir2, rt_out),
           row.names = T)
@@ -101,33 +106,24 @@ rt_gen = function(indir = indir2,
     }
 
 # Trying different minDeltaTimes to see what effect it has on sample size
-mindelt = 0  # minutes assumed
-WCmonitoring.10to12.19.deltat0.rt =
+# This one should remove none and give us all records
+# mindelt = 0  produced 12286 records
+WCmonitoring.10to12.19.deltat0.rmdupsF.rt =
     rt_gen(indir = indir2,
            outdir = outdir2,
            projname = projname,
-           mindelt = 0)
+           mindelt = 0,
+           removedups = F)
 
-mindelt = 1  # minutes assumed
-WCmonitoring.10to12.19.deltat1.rt =
+# mindelt = 1  produced 4109 records
+WCmonitoring.10to12.19.deltat1.rmdupsT.rt =
     rt_gen(indir = indir2,
            outdir = outdir2,
            projname = projname,
            mindelt = 1)
 
-mindelt = 2  # minutes assumed
-WCmonitoring.10to12.19.deltat2.rt =
-    rt_gen(indir = indir2,
-           outdir = outdir2,
-           projname = projname,
-           mindelt = 2)
-
-mindelt = 10  # minutes assumed
-WCmonitoring.10to12.19.deltat10.rt =
-    rt_gen(indir = indir2,
-           outdir = outdir2,
-           projname = projname,
-           mindelt = 10)
+# mindelt = 2  produced 3970 records
+# mindelt = 10  produced 3350 records
 ```
 
 
@@ -137,7 +133,7 @@ WCmonitoring.10to12.19.deltat10.rt =
 library(dplyr)
 
 wc_monitor.deltat1.stationbyspecies.sum = 
-    WCmonitoring.10to12.19.deltat1.rt %>%
+    WCmonitoring.10to12.19.deltat1.rmdupsT.rt %>%
     group_by(Station,Species) %>%
     tally()
 write.csv(wc_monitor.deltat1.stationbyspecies.sum, 

@@ -12,12 +12,21 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## Make tables in postgreql database and upload
 
+Currently, you add a uuid column and make it a primary constraint with something like in postgres, run after your first upload
+
+```
+ALTER TABLE camera_trap.digikam_record_table ADD uuid uuid NOT NULL DEFAULT uuid_generate_v1();`
+ALTER TABLE camera_trap.digikam_record_table ADD CONSTRAINT digikam_record_table_pk PRIMARY KEY (uuid);
+
+```
+
+
 ```{r data}
 # can add the following inside braces above: echo=FALSE, message=F, warning=F
 # install.packages("RPostgreSQL")
 library(RPostgreSQL)
-library(dplyr)
-#library(sf) # Spatially explicit tools. Comment out if not using.
+# library(dplyr)
+# library(sf) # Spatially explicit tools. Comment out if not using.
 
 source("loginparams.R")
 
@@ -26,9 +35,13 @@ con <- dbConnect(drv, dbname=DBname,host=Host,port=Port,
                  user=User,password=Password)
 
 df = read.csv(file.path("data/recordTables",
-                        "WCtrailMonitoring.2019-10-18 to 2019-12-15.mindeltat.1.rt.csv"), 
-              header = T,
-              row.names = T)
+"WCtrailMonitoring.2019-10-18 to 2019-12-15.mindeltat.1.removedups.TRUE.rt.csv"), 
+              header = T)
+# df = read.csv(file.path("data/recordTables",
+# "WCtrailMonitoring.2019-10-18 to 2019-12-15.mindeltat.0.removedups.FALSE.rt.csv"), 
+#               header = T)
+
+names(df)[1] = "proj_record_id"
 
 # Be very careful about overwrite and append (F and T are safest)
 dbWriteTable(con,c("camera_trap", "digikam_record_table"),
@@ -37,6 +50,8 @@ dbWriteTable(con,c("camera_trap", "digikam_record_table"),
              append = T, 
              row.names = T
 )
+rm(Password)
+rm(df)
 
 dbDisconnect(con)
 ```
